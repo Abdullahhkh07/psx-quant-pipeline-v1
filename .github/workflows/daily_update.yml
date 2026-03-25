@@ -1,0 +1,39 @@
+name: Daily PSX Data Pipeline
+
+on:
+  schedule:
+    # This tells the robot to run at 12:00 PM UTC (which is 5:00 PM in Pakistan) every weekday (Monday-Friday)
+    - cron: '0 12 * * 1-5'
+  workflow_dispatch: # This adds a manual "Run" button for us to test it!
+
+permissions:
+  contents: write # Gives the robot permission to save the data back to your repository
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest # The robot will use a free Linux computer
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # We use a super stable version of Python for the server
+
+      - name: Install Tools
+        run: |
+          pip install pandas pyarrow numpy
+          pip install https://github.com/rongardF/tvdatafeed/archive/refs/heads/main.zip
+          
+      - name: Run the Data Engine!
+        run: python pipeline.py
+
+      - name: Save the new Data
+        run: |
+          git config --global user.name "GitHub Automation Bot"
+          git config --global user.email "actions@github.com"
+          git add data/
+          git commit -m "🤖 Auto-updated stock data" || exit 0
+          git push
